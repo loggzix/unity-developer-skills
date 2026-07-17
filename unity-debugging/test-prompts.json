@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "scenario": "Type missing dù compile sạch (từ claude-mem: BattlePassTooltip/BattlePassProgressLevel, pain lặp 4+ session)",
+    "prompt": "Unity 6, project Artshooter. Tôi viết xong Assets/_TrollGame/Scripts/Runtime/BattlePass/BattlePassTooltip.cs, console 0 error, nhưng khi add component vào prefab thì Unity báo 'The associated script can not be loaded. Please fix any compile errors and assign a valid script.' — dù không có compile error nào. Debug giúp.",
+    "expected": "KHÔNG đoán mù, không force reimport ngay (last resort). Quy trình: (1) check class name == file name, đúng namespace, kế thừa MonoBehaviour, không generic/abstract; (2) check file nằm đúng asmdef — asmdef compile riêng, console filter có thể giấu error assembly khác → check full console + Editor.log; (3) check .meta/GUID sinh chưa; (4) is_compiling/domain reload treo; (5) reimport chỉ khi các bước trên sạch. Đưa các bước theo thứ tự rẻ→đắt."
+  },
+  {
+    "id": 2,
+    "scenario": "Ghost scripts khi port prefab giữa project (từ claude-mem: 47 ghost scripts BattlePassWF)",
+    "prompt": "Tôi copy folder prefab BattlePass từ project water-flow sang Artshooter. Mở prefab lên toàn 'Missing (Mono Script)' ở hàng chục component. Làm sao cho prefab dùng được? Có nên xóa hết mấy component missing không?",
+    "expected": "Giải thích root cause: prefab reference script bằng GUID trong .meta — script không theo sang project đích nên GUID không resolve. KHÔNG xóa mù: xóa mất luôn wiring serialize. Hướng xử lý theo thứ tự: (1) đem script gốc + .meta sang (giữ GUID) rồi mới quyết giữ/thay; (2) map GUID cũ→script tương đương trong project đích (sửa GUID trong prefab YAML hoặc tool); (3) chỉ remove ghost khi xác nhận component đó không cần. Cảnh báo backup/git trước khi sửa YAML."
+  },
+  {
+    "id": 3,
+    "scenario": "NRE lúc đổi scene nhanh (từ claude-mem: ServiceLocator double-init, init-order)",
+    "prompt": "Game chạy Editor bình thường, nhưng thi thoảng khi đổi scene nhanh thì NullReferenceException ở PopupBattlePass.OnEnable, stack trace chỉ vào dòng: ScoreManager.Instance.OnScoreChanged += Refresh. Sửa giúp.",
+    "expected": "KHÔNG vá `?.` mù (skill: null check giấu wiring bug). Reproduce trước: 'thi thoảng' + 'đổi scene nhanh' = teardown/init order — phân loại đúng nguyên nhân NRE: Instance null vì ScoreManager bị destroy trước (scene unload) hoặc chưa Awake khi OnEnable chạy. Fix root cause: guard lifecycle đúng chỗ (null-guard .Instance during teardown là hợp lệ theo unity-developer), unsubscribe đối xứng OnDisable, hoặc sửa init order. Guard: thêm assertion/log khi Instance null lúc subscribe. Verify: repro lại scenario đổi scene."
+  },
+  {
+    "id": 4,
+    "scenario": "Editor-vs-build: NRE chỉ trên device (row untested — stripping bisect order)",
+    "prompt": "Game chạy Editor ổn, build Android ra device thì NullReferenceException trong FirebaseManager ngay splash screen. Console Editor sạch. Debug giúp.",
+    "expected": "Route vào row Editor-vs-build, bisect đúng thứ tự: (1) stripping — Managed Stripping Level = Minimal, rebuild; hết lỗi → tạo Assets/link.xml với <linker><assembly fullname=\"X\"/></linker>, X lấy từ stack trace build; (2) grep #if UNITY_ trong call path; (3) Addressables/Resources path-case; (4) generics serialization. Evidence từ device: adb logcat -s Unity, đọc exception ĐẦU TIÊN; feed exception đó về step 1 như capture mới. KHÔNG đoán mù từ mô tả."
+  },
+  {
+    "id": 5,
+    "scenario": "Editor treo cứng (row editor-hang — trigger đã hứa trong description)",
+    "prompt": "Unity Editor đơ cứng khi mở project, không crash, không có dialog gì. Đợi 10 phút vẫn vậy. Làm gì bây giờ?",
+    "expected": "Phân biệt busy vs deadlocked: không Play Mode → tail Editor.log live (Get-Content $env:LOCALAPPDATA\\Unity\\Editor\\Editor.log -Wait) — log còn chạy (import/compile) → chờ; log đứng 5+ phút VÀ CPU Unity ~0 → deadlock: tạo process dump (Task Manager → Create dump file) TRƯỚC khi kill. Hang lặp lại ở cùng dòng log → 🔴 checkpoint, chỉ clear đúng cache được nêu tên (vd Library/ShaderCache), KHÔNG BAO GIỜ xóa Library toàn bộ ngay."
+  },
+  {
+    "id": 6,
+    "scenario": "Regression + dirty tree (checkpoint wait-semantics untested)",
+    "prompt": "Bug này tuần trước chưa có, giờ có. Working tree tôi đang dở dang nhiều file chưa commit. Tìm commit gây lỗi giúp — bisect luôn đi.",
+    "expected": "🔴 checkpoint TRƯỚC git bisect vì dirty tree — nêu ý định và CHỜ user trả lời tường minh; im lặng không phải đồng ý, không batch bisect chung với hành động khác dù user nói 'bisect luôn đi'. Nếu bisect ra commit scene/prefab → diff YAML tìm GUID/serialized-field changes, không tìm code."
+  },
+  {
+    "id": 7,
+    "scenario": "Wrong behavior, no exception (row untested — không được sửa mù)",
+    "prompt": "Nhân vật nhảy cao gấp đôi sau refactor hôm qua, không có exception hay error nào trong console. Sửa giúp.",
+    "expected": "Route vào row 'Wrong behavior, no exception': binary-search data path bằng Debug.Log($\"{Time.frameCount} in={x} state={y}\", this) từng hop input→state→output (max 5 hops/lượt), giá trị đầu tiên lệch chỉ ra layer; KHÔNG sửa mù từ mô tả. Cần thêm: Debug.Break() tại frame lệch, inspect live state; giá trị đúng trong code nhưng sai trên screen → stale serialized override. Sau fix: guard + re-run repro."
+  },
+  {
+    "id": 8,
+    "scenario": "Symptom lạ không khớp row nào — chứng minh METHOD generalize (chống overfit)",
+    "prompt": "Sau khi update Addressables catalog trên device, một loạt material render màu hồng — Editor thì bình thường. Debug giúp.",
+    "expected": "Không có row khớp nguyên văn → routing (b): KHÔNG bịa fix từ mô tả; chạy PROCESS: capture evidence từ device trước (adb logcat, shader error/missing), localize layer (shader stripping trong build? variant không có trong bundle cũ vs mới? platform-specific), minimal repro, causal chain 1 dòng trước khi sửa. Chấm THEO QUY TRÌNH, không theo row thuộc lòng."
+  },
+  {
+    "id": 9,
+    "scenario": "Editor OOM khi bake lightmap — off-table, cần method",
+    "prompt": "Unity Editor crash out-of-memory mỗi lần bake lightmap scene lớn. Debug giúp.",
+    "expected": "Crash row + method: đọc Editor.log tail xác nhận OOM trong bake, KHÔNG đoán mù; giảm biến (bake nửa scene / giảm lightmap resolution để cô lập); causal chain trước khi đề xuất fix; checkpoint trước bất kỳ thao tác destructive (clear GI cache có tên cụ thể, không xóa Library toàn bộ)."
+  },
+  {
+    "id": 10,
+    "scenario": "UI Toolkit button chết sau domain reload — off-table",
+    "prompt": "Button UI Toolkit ngừng nhận click sau mỗi lần domain reload (sửa script xong quay lại Play). Debug giúp.",
+    "expected": "Không row nguyên văn → method: repro 3/3 (sửa script bất kỳ → reload → click), phân loại domain-reload state (callback đăng ký trong static/init không re-register sau reload), causal chain: reload xóa registration → clickable mất handler; fix root cause re-register đúng lifecycle, KHÔNG vá bằng cách tắt domain reload."
+  }
+]

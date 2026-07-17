@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "scenario": "Breakdown feature IAP nhiều file (từ claude-mem S205: BP offer popup 2 tier)",
+    "prompt": "Breakdown feature này thành task list: Battle Pass offer popup có 2 gói mua IAP (Standard/Premium), tự hiện khi người chơi mở Battle Pass lần đầu mỗi mùa, mua thành công thì unlock premium track + refresh toàn bộ UI tier + bắn analytics event. Project Artshooter có sẵn hệ BattlePass, ScreenNavigator, IAP manager (Zego SDK).",
+    "expected": "Đọc code trước khi chia (khảo sát hệ BP/IAP có sẵn). Slice dọc, mỗi task compile được + scene playable. Đúng ordering: data/serialized fields TRƯỚC (config offer, flag first-seen-per-season), pure C# logic trước MonoBehaviour glue, prefab/scene wiring CUỐI + tách riêng. Mỗi task có acceptance criteria + verification (compile, manual Play Mode steps) + dependencies + size S/M/L. IAP callback async → task riêng có xử lý fail/cancel."
+  },
+  {
+    "id": 2,
+    "scenario": "Yêu cầu cố tình mơ hồ — 2+ cách hiểu làm đổi hẳn task list",
+    "prompt": "Breakdown feature này thành task list: làm daily reward cho game, người chơi mỗi ngày vào nhận quà.",
+    "expected": "Nhận ra requirement mơ hồ nhiều cách hiểu (reset theo giờ nào — 0h local, UTC hay 24h kể từ lần nhận? miss ngày thì streak reset hay stack? reward table hardcode hay remote config?). Câu hỏi chốt đặt TOP dạng 'chốt trước khi làm' kèm assumed answer cho từng option — KHÔNG im lặng tự chọn một cách hiểu rồi breakdown theo nó."
+  },
+  {
+    "id": 3,
+    "scenario": "Yêu cầu single-file scope rõ ràng — negative trigger",
+    "prompt": "Đổi màu nút Claim trong DailyRewardPopup sang đỏ.",
+    "expected": "Từ chối breakdown: single-file change scope rõ ràng, đúng negative trigger của skill ('Not for single-file changes with obvious scope'). Chỉ ra nên làm thẳng, không tạo task list."
+  },
+  {
+    "id": 4,
+    "scenario": "Epic >8 tasks — nhánh outline chưa từng có test",
+    "prompt": "Breakdown feature meta-progression đầy đủ cho Artshooter: player level + XP curve (remote config), skill tree 3 nhánh với 15 node (SO assets), daily/weekly quest tích XP, prestige reset giữ cosmetic, UI 4 màn hình mới (level bar, skill tree, quest board, prestige confirm), lưu toàn bộ qua save system hiện có.",
+    "expected": "Ước tính vượt 8 task → áp luật epic: full tasks CHỈ cho slice 1 (thinnest end-to-end path qua risk cao nhất — save/serialized data của XP/level trước), các slice còn lại = one-line outline đúng shape '**Slice N — tên** · goal · ~task count · risk'. Delivered list PHẢI có câu 'Slices 2+ are outlines — full tasks written after slice 1 is approved and green.' Không viết full task cho mọi slice."
+  },
+  {
+    "id": 5,
+    "scenario": "Feature một phần đã tồn tại — nhánh VERIFY-EXISTING chưa test",
+    "prompt": "Breakdown: thêm object pooling cho bullet — project đã có PoolManager generic đang dùng cho enemy.",
+    "expected": "Áp If-row 'already exists': shrink breakdown về DELTA — nói rõ phần nào PoolManager đã cover và ở đâu; chưa chắc coverage → task VERIFY-EXISTING dẫn đầu (read + 1 Play Mode check); KHÔNG plan lại việc đã xong, không viết PoolManager mới."
+  },
+  {
+    "id": 6,
+    "scenario": "Risk ngoài danh sách risk order — công thức blast radius B + threshold R mặc định",
+    "prompt": "Thêm hệ thống addressables loading cho shop icons — hiện icons đang load qua Resources.Load, muốn chuyển sang Addressables. Chia task giúp.",
+    "expected": "Feature KHÔNG có serialized-data risk trong danh sách risk order nhưng có risk ngoài danh sách (Addressables migration) → phải chạy công thức blast radius B qua guid-grep trên các script bị đụng, threshold R = 3 (default vì không có serialized-data risk), xếp tier bằng nội suy 3 dòng (B ≥ R / R > B ≥ ceil(R/2) / B < ceil(R/2)) — KHÔNG copy nguyên văn tier list làm đáp án. Estimate table (mỗi slice + Sum = T) phải xuất hiện TRƯỚC khi step 3 bắt đầu."
+  }
+]

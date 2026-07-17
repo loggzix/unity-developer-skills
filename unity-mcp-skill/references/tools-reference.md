@@ -118,53 +118,7 @@ manage_scene(
 
 # Screenshot (file only — saves to Assets/Screenshots/)
 manage_camera(action="screenshot")
-
-# Screenshot with inline image (base64 PNG returned to AI)
-manage_scene(
-    action="screenshot",
-    camera="MainCamera",         # str, optional - camera name, path, or instance ID
-    include_image=True,          # bool, default False - return base64 PNG inline
-    max_resolution=512           # int, optional - downscale cap (default 640)
-)
-
-# Batch surround — contact sheet of 6 fixed angles (front/back/left/right/top/bird_eye)
-manage_scene(
-    action="screenshot",
-    batch="surround",            # str - "surround" for 6-angle contact sheet
-    max_resolution=256           # int - per-tile resolution cap
-)
-# Returns: single composite contact sheet image with labeled tiles
-
-# Batch surround centered on a specific target
-manage_scene(
-    action="screenshot",
-    batch="surround",
-    view_target="Player",        # str|int|list[float] - center surround on this target
-    max_resolution=256
-)
-
-# Batch orbit — configurable multi-angle grid around a target
-manage_scene(
-    action="screenshot",
-    batch="orbit",               # str - "orbit" for configurable angle grid
-    view_target="Player",        # str|int|list[float] - target to orbit around
-    orbit_angles=8,              # int, default 8 - number of azimuth steps
-    orbit_elevations=[0, 30],    # list[float], default [0, 30, -15] - vertical angles in degrees
-    orbit_distance=10,           # float, optional - camera distance (auto-fit if omitted)
-    orbit_fov=60,                # float, default 60 - camera FOV in degrees
-    max_resolution=256           # int - per-tile resolution cap
-)
-# Returns: single composite contact sheet (angles × elevations tiles in a grid)
-
-# Positioned screenshot (temp camera at viewpoint, no file saved)
-manage_scene(
-    action="screenshot",
-    view_target="Enemy",         # str|int|list[float] - target to aim at
-    view_position=[0, 10, -10],  # list[float], optional - camera position
-    view_rotation=[45, 0, 0],    # list[float], optional - euler angles (overrides view_target aim)
-    max_resolution=512
-)
-
+# All other screenshot variants (inline image, batch surround/orbit, positioned): see Camera Tools section below.
 # Frame scene view on target
 manage_scene(
     action="scene_view_frame",
@@ -377,8 +331,9 @@ script_apply_edits(
         # Insert new method
         {
             "op": "insert_method",
-            "afterMethod": "Start",
-            "code": "void OnEnable() { Debug.Log(\"Enabled\"); }"
+            "position": "after",
+            "afterMethodName": "Start",
+            "replacement": "void OnEnable() { Debug.Log(\"Enabled\"); }"
         },
         # Delete method
         {
@@ -730,9 +685,10 @@ manage_editor(action="remove_tag", tag_name="OldTag")
 manage_editor(action="add_layer", layer_name="Projectiles")
 manage_editor(action="remove_layer", layer_name="OldLayer")
 
-manage_editor(action="open_prefab_stage", prefab_path="Assets/Prefabs/Enemy.prefab")
-manage_editor(action="save_prefab_stage")   # Save changes in the open prefab stage
-manage_editor(action="close_prefab_stage")  # Exit prefab editing mode back to main scene
+# Prefab stage editing belongs to manage_prefabs, NOT manage_editor:
+manage_prefabs(action="open_prefab_stage", prefab_path="Assets/Prefabs/Enemy.prefab")
+manage_prefabs(action="save_prefab_stage")   # Save changes in the open prefab stage
+manage_prefabs(action="close_prefab_stage")  # Exit prefab editing mode back to main scene
 
 # Package deployment (no confirmation dialog — designed for LLM-driven iteration)
 manage_editor(action="deploy_package")     # Copy configured MCPForUnity source into installed package
@@ -1420,7 +1376,7 @@ manage_probuilder(action="center_pivot", target="MyCube")
 manage_probuilder(action="validate_mesh", target="MyCube")
 ```
 
-See also: [ProBuilder Workflow Guide](probuilder-guide.md) for detailed patterns and complex object examples.
+See also: read the manage_probuilder tool schema directly for detailed shape/edit action parameters.
 
 ---
 

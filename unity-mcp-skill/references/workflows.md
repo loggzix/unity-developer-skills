@@ -61,10 +61,12 @@ if editor_state["is_compiling"]:
 
 ### Fresh Scene Before Building
 
-**Always start a generated scene build with `manage_scene(action="create")`** to get a clean empty scene. This avoids conflicts with existing default objects (Camera, Light) that would cause "already exists" errors when the execution plan tries to create its own.
+🔴 CHECKPOINT: `manage_scene(action="create")` replaces the open scene — unsaved changes are silently discarded; save or get user confirmation first (see SKILL.md STOP · CHECKPOINT). **After the checkpoint clears, start a generated scene build with `manage_scene(action="create")`** to get a clean empty scene. This avoids conflicts with existing default objects (Camera, Light) that would cause "already exists" errors when the execution plan tries to create its own.
 
 ```python
-# Step 0: Create fresh empty scene (replaces current scene entirely)
+# 🔴 CHECKPOINT: manage_scene(action="create"/"load") replaces the open scene and silently discards unsaved changes — apply the STOP · CHECKPOINT gate from SKILL.md (list changes, wait for user yes) BEFORE this step.
+
+Step 0: Create fresh empty scene (replaces current scene entirely)
 manage_scene(action="create", name="MyGeneratedScene", path="Assets/Scenes/")
 
 # Now proceed with the phased execution plan...
@@ -107,18 +109,20 @@ batch_execute(commands=[
 ])
 ```
 
-### Script Overwrites with `manage_script(action="update")`
+### Rewriting an Existing Script
 
-When a generated script needs to be rewritten (e.g., to add auto-wiring logic), use `update` instead of deleting and recreating:
+`manage_script` has NO `update` action (only create/read/delete). To rewrite a file wholesale, use `apply_text_edits` with a full-range replacement — do NOT delete+recreate (loses the GUID, breaking scene/prefab references):
 
 ```python
-manage_script(
-    action="update",
-    path="Assets/Scripts/MyScript.cs",
-    contents="using UnityEngine;\n\npublic class MyScript : MonoBehaviour { ... }"
+sha = get_sha(uri="Assets/Scripts/MyScript.cs")
+apply_text_edits(
+    uri="Assets/Scripts/MyScript.cs",
+    precondition_sha256=sha["sha256"],
+    edits=[{"startLine": 1, "startCol": 1, "endLine": <last_line + 1>, "endCol": 1,
+            "newText": "using UnityEngine;\n\npublic class MyScript : MonoBehaviour { ... }"}]
 )
-# manage_script update auto-triggers import + compile — just wait and check console
-# Read mcpforunity://editor/state → wait until is_compiling == false
+# Prefer script_apply_edits replace_method when only one method changes.
+# Wait until is_compiling == false, then:
 read_console(types=["error"], count=10)
 ```
 
@@ -305,8 +309,10 @@ script_apply_edits(
     edits=[
         {
             "op": "insert_method",
-            "afterMethod": "Start",
-            "code": '''
+            "className": "GameManager",
+            "position": "after",
+            "afterMethodName": "Start",
+            "replacement": '''
     public void ResetGame()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
@@ -457,7 +463,7 @@ batch_execute(commands=[
 
 ```python
 # 1. List available tests
-# Read mcpforunity://tests/EditMode
+# Read mcpforunity://tests (all tests, first page; filter by mode via run_tests(mode="EditMode") instead — no /EditMode sub-resource exists)
 
 # 2. Run specific tests
 result = run_tests(
@@ -547,8 +553,8 @@ for error in errors["messages"]:
     # Use find_in_file to locate the problematic code
     pass
 
-# 3. After fixing, refresh and check again
-refresh_unity(mode="force", scope="scripts", compile="request", wait_for_ready=True)
+# 3. After fixing: script_apply_edits already triggered import + compile — do NOT call refresh_unity (redundant).
+# Poll mcpforunity://editor/state until is_compiling == false, then:
 read_console(types=["error"], count=10)
 ```
 
@@ -1587,7 +1593,7 @@ manage_camera(action="screenshot", capture_source="scene_view",
 
 When `com.unity.probuilder` is installed, prefer ProBuilder shapes over primitive GameObjects for any geometry that needs editing, multi-material faces, or non-trivial shapes. Check availability first with `manage_probuilder(action="ping")`.
 
-See [ProBuilder Workflow Guide](probuilder-guide.md) for full reference with complex object examples.
+For shape/edit action parameters, read the manage_probuilder tool schema directly.
 
 ### ProBuilder vs Primitives Decision
 
@@ -1882,7 +1888,7 @@ Use `deploy_package` to copy your local MCPForUnity source into the project's in
 manage_editor(action="deploy_package")
 
 # 3. Wait for recompilation to finish
-refresh_unity(mode="force", compile="request", wait_for_ready=True)
+# Do NOT refresh_unity here — script edits already trigger recompile (SKILL.md §1); poll mcpforunity://editor/state every 1s (max 60s) until ready_for_tools
 
 # 4. Check for compilation errors
 read_console(types=["error"], count=10, include_stacktrace=True)
@@ -1898,7 +1904,7 @@ run_tests(mode="EditMode")
 manage_editor(action="restore_package")
 
 # Wait for recompilation
-refresh_unity(mode="force", compile="request", wait_for_ready=True)
+# Do NOT refresh_unity here — script edits already trigger recompile (SKILL.md §1); poll mcpforunity://editor/state every 1s (max 60s) until ready_for_tools
 ```
 
 ---
@@ -2099,7 +2105,7 @@ errors = read_console(types=["error"], count=20)
 # ... edit scripts ...
 
 # 3. Force refresh
-refresh_unity(mode="force", scope="scripts", compile="request", wait_for_ready=True)
+# Do NOT refresh_unity — edits already trigger recompile (SKILL.md §1); poll mcpforunity://editor/state until ready_for_tools; ONLY if the poll times out with no compile in progress: refresh_unity(mode="force", scope="scripts", compile="request", wait_for_ready=True)
 
 # 4. Verify clean console
 errors = read_console(types=["error"], count=5)

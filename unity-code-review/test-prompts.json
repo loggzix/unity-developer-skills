@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "scenario": "Review uncommitted changes trên repo Unity thật (prefab staged + script unstaged + generated JSON)",
+    "prompt": "Review my uncommitted changes",
+    "expected": "Chạy git diff --stat trước; diff staged VÀ unstaged riêng, flag drift (prefab staged nhưng script chưa); tách YAML churn khỏi thay đổi thật; generated files chỉ verify consistency với caller; findings đúng prefix Critical:/Required:/Nit:/Consider:/FYI: kèm file:line; verdict + verification story (compile verified qua read_console nếu có MCP, không thì ghi 'compile not verified'); KHÔNG tự sửa code."
+  },
+  {
+    "id": 2,
+    "scenario": "Review PR có leak event + GetComponent trong Update",
+    "prompt": "Review PR #42",
+    "expected": "git fetch origin pull/42/head:pr-42 TRƯỚC (mandate Step 0), rồi gh pr diff 42; gh fail → git diff từ merge-base với ref pr-42 đã fetch; tests first (search trên ref pr-42, không phải working tree); walk đủ 6 axes, mỗi axis output findings hoặc 'Axis <N> (<tên axis>): clean'; bắt subscribe-không-unsubscribe (Critical) + GetComponent per-frame (Required); verdict mapping đúng theo prefix; không post lên PR khi chưa được confirm."
+  },
+  {
+    "id": 3,
+    "scenario": "Review 1 file không có diff (code do agent khác viết)",
+    "prompt": "Another agent wrote this ScoreManager.cs, check it",
+    "expected": "Treat cả file như hunk set: chạy đủ 6 axes, skip sizing; grep caller của public methods trước khi phán; verdict ghi rõ không có change-context; static-review-only caveat nếu không chạy được project."
+  },
+  {
+    "id": 4,
+    "scenario": "Diff 2000 dòng lẫn nhiều concern + tree dirty lẫn branch ahead",
+    "prompt": "Quick look at my changes, branch cũng đang ahead origin đấy",
+    "expected": "🔴 CHECKPOINT: liệt kê candidate diffs (unstaged/staged/branch-vs-base) với --stat size, DỪNG hỏi user chọn layer trước khi đọc hunk; nếu diff 1000+ dòng → khuyến nghị split, review concern rủi ro nhất kỹ thay vì tất cả nông."
+  },
+  {
+    "id": 5,
+    "scenario": "Serialized-field rename thiếu FormerlySerializedAs",
+    "prompt": "Review diff này — tôi rename field [SerializeField] speed thành moveSpeed trong PlayerMotor.cs",
+    "expected": "Grep tên CŨ 'speed' trong *.unity/*.prefab (YAML lưu field name, không phải tên mới); có hit mà thiếu [FormerlySerializedAs] → Required finding: silent data loss trên mọi prefab/scene đã set giá trị; nêu fix: thêm [FormerlySerializedAs(\"speed\")] vào field moveSpeed."
+  }
+]

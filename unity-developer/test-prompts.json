@@ -1,0 +1,80 @@
+[
+  {
+    "id": 1,
+    "scenario": "Feature + kiến trúc (existing Singleton project)",
+    "prompt": "Project Artshooter (Unity 6, team 1 người, đang xài Singleton<T>). Viết AudioManager phát SFX: pooling AudioSource, load clip qua Addressables lazy, volume theo config ScriptableObject.",
+    "expected": "Không hỏi lại kiến trúc (tự detect Singleton đang dùng, chỉ ASK khi project mới). Dùng PersistentSingleton<T>. UniTask cho load Addressables async (không async void). Pool AudioSource tái dùng. Access modifier chặt: private + [SerializeField], không public field. Volume đọc từ ScriptableObject config. Không comment thừa (chỉ giải thích why khi khó đoán)."
+  },
+  {
+    "id": 2,
+    "scenario": "Review surgical (bắt lỗi, không refactor thừa)",
+    "prompt": "Review script popup này, chỉ sửa chỗ SAI, đừng refactor linh tinh:\n\npublic class RewardPopup : MonoBehaviour {\n    public RewardData data;\n    public async void Show() {\n        await UniTask.Delay(200);\n        transform.DOScale(1f, 0.25f);\n    }\n}",
+    "expected": "Bắt async void -> đổi UniTaskVoid (hoặc trả UniTask). Public field data -> [SerializeField] private + property nếu cần. DOTween: thêm OutBack easing, kill/complete tween khi OnDisable để tránh leak, set scale khởi điểm. GIỮ nguyên cấu trúc/style, KHÔNG đẻ interface/factory/abstraction thừa (surgical). Mỗi dòng sửa trace thẳng về lỗi thật."
+  },
+  {
+    "id": 3,
+    "scenario": "Performance + event",
+    "prompt": "UI list 200 item lag khi scroll, đang Instantiate/Destroy mỗi lần. Tối ưu.",
+    "expected": "ĐÒI profiler data trước, không tối ưu mù (measure-first). Object pooling / recycling view thay Instantiate-Destroy. Addressables load icon lazy. Tránh GC alloc trong vòng scroll (không LINQ/string concat mỗi frame). Cập nhật data qua event/interface contract, không FindObjectOfType. Chỉ đề xuất mức cần, không over-engineer."
+  },
+  {
+    "id": 4,
+    "scenario": "FindObject — viết mới, cám dỗ Find reference chéo",
+    "prompt": "Project Unity 6 đang dùng Singleton<T>. Viết EnemyWaveSpawner: spawn enemy theo wave, khi enemy chết thì cộng điểm vào GameManager và cập nhật ScoreHud trên Canvas.",
+    "expected": "KHÔNG dùng FindObjectOfType/FindAnyObjectByType/FindObjectsByType/GameObject.Find ở bất kỳ đâu. GameManager qua .Instance. ScoreHud nhận điểm qua event subscribe (OnEnable/OnDisable pair) hoặc [SerializeField] wire Inspector — không Find Canvas/Hud."
+  },
+  {
+    "id": 5,
+    "scenario": "FindObject — trap: Find trong Start (ngoài Update loop)",
+    "prompt": "Refactor script này theo chuẩn project (Singleton architecture):\n\npublic class ShopButton : MonoBehaviour {\n    private AudioManager audioManager;\n    private void Start() {\n        audioManager = FindObjectOfType<AudioManager>();\n    }\n    public void OnClick() {\n        audioManager.PlaySfx(\"buy\");\n    }\n}",
+    "expected": "Bắt và loại FindObjectOfType dù nó nằm trong Start (không phải chỉ Update): thay bằng AudioManager.Instance (null-guard theo skill). Giải thích FindObjectOfType quét toàn scene hierarchy — tốn tài nguyên, hidden dependency. Không refactor thừa phần khác."
+  },
+  {
+    "id": 6,
+    "scenario": "FindObject — ambiguous: lấy tập object động",
+    "prompt": "Khi player ăn item Freeze, mọi Enemy đang active trong scene phải bị đóng băng 3 giây. Enemy spawn/despawn liên tục qua pool. Viết phần logic này.",
+    "expected": "KHÔNG FindObjectsByType/FindObjectsOfType mỗi lần ăn item. Dùng registry pattern: Enemy tự đăng ký vào static HashSet/List (hoặc EnemyManager) trong OnEnable, gỡ trong OnDisable — pool-safe. Item chỉ iterate registry. Hoặc event OnFreezeAll mà Enemy subscribe."
+  },
+  {
+    "id": 7,
+    "scenario": "Popup flow + persistent state (từ claude-mem: dạng task phổ biến nhất — BP intro/info popup)",
+    "prompt": "Project Singleton, có sẵn ScreenNavigator quản lý popup. Viết PopupBattlePassInfo: mở khi bấm nút '?', hiện hướng dẫn, tap bất kỳ đâu để đóng. Riêng lần ĐẦU TIÊN người chơi mở battle pass thì popup này tự hiện (các lần sau không tự hiện nữa).",
+    "expected": "Tái dùng ScreenNavigator/popup base có sẵn của project (khảo sát trước, không tự chế hệ popup mới). Flag first-time lưu bền (DataManager/PlayerPrefs) — đọc/ghi có guard init. Tap-to-close qua Button fullscreen hoặc raycast — unsubscribe/cleanup khi đóng. Không FindObject. Không over-engineer (không state machine thừa)."
+  },
+  {
+    "id": 8,
+    "scenario": "Tween cascade pool-safe (từ claude-mem: ScaleQueueAnimation, fx coin tuần này)",
+    "prompt": "Danh sách reward cell trong popup cần hiện lần lượt: mỗi cell scale 0→1 (DOTween, OutBack), cell sau trễ 0.05s so với cell trước. Cell được spawn/despawn qua pool. Viết component.",
+    "expected": "Kill/complete tween trong OnDisable — pool-safe, không tween chạy trên cell đã trả pool. Reset scale khi re-spawn. Delay theo index không alloc closure thừa mỗi frame. SetLink hoặc kill thủ công đúng chỗ. Tái dùng ScaleQueueAnimation nếu project có sẵn (khảo sát trước khi viết mới)."
+  },
+  {
+    "id": 9,
+    "scenario": "Editor tool (từ claude-mem: CSV-to-JSON window)",
+    "prompt": "Viết Unity EditorWindow: chọn file CSV config (id,points,reward_type,amount), preview số dòng đọc được, bấm Convert xuất ra Assets/_TrollGame/Game.AddressableAssets/Data/Config/battle_pass_config.json.",
+    "expected": "Code nằm trong Editor assembly (folder Editor hoặc #if UNITY_EDITOR). Validate: file không chọn/CSV sai cột → báo lỗi rõ, không throw silent. AssetDatabase.Refresh sau khi ghi. EditorGUILayout chuẩn. Không đem code Editor vào runtime asmdef."
+  },
+  {
+    "id": 10,
+    "scenario": "Path B review — DI path chưa từng có test",
+    "prompt": "Project dùng VContainer + SignalBus. Review class GameService này: constructor có [Preserve] nhận SignalBus, Initialize() subscribe WonSignal, trong OnWon() gọi Debug.Log($\"[GameService] won\"), không implement IDisposable, không unsubscribe.",
+    "expected": "Detect Path B (VContainer/SignalBus) → áp DI rules: (a) Debug.Log trong runtime DI code = 🔴 Critical → injected ILogger, không guard/prefix; (b) thiếu IDisposable + TryUnsubscribe<WonSignal> = 🔴 Critical (leak/double-fire); (c) [Preserve] đã đúng — không flag. Surgical: chỉ sửa defect checklist, không restyle. Verdict + severity theo mapping."
+  },
+  {
+    "id": 11,
+    "scenario": "Mixed signals — cả Singleton<T> lẫn LifetimeScope trong project",
+    "prompt": "Project này có cả class Singleton<T> đang được 12 manager kế thừa LẪN một LifetimeScope + vài chỗ [Inject]. Viết InventoryManager mới cho tôi.",
+    "expected": "KHÔNG tự chọn path: match failure-mode row 'BOTH architecture signals' → treat as new project, ASK user (STEP 0) và CHỜ. User không trả lời được/non-interactive → follow pattern của đa số 5 file .cs sửa gần nhất (git log), nêu assumption 1 dòng, ghi CLAUDE.md provisional. Không viết code trước khi có quyết định/assumption tường minh."
+  },
+  {
+    "id": 12,
+    "scenario": "Structural match — pause ALL timers khi app mất focus",
+    "prompt": "Pause mọi timer đang chạy khi app mất focus (OnApplicationFocus). Viết giúp.",
+    "expected": "Map theo CẤU TRÚC vào failure-mode row 'Need ALL objects of a type' (keyword không trùng vẫn phải match): timer tự đăng ký vào registry/HashSet của manager trong OnEnable, gỡ trong OnDisable — KHÔNG hardcode danh sách timer, không FindObjectsByType mỗi lần mất focus. Lifecycle đối xứng (đăng ký OnEnable ↔ gỡ OnDisable). Không mirror nguyên văn row — áp fix theo structure của code thật."
+  },
+  {
+    "id": 13,
+    "scenario": "Routing one-shot flag / save-data — daily-login streak",
+    "prompt": "Daily-login streak lưu ở đâu và code thế nào?",
+    "expected": "Route vào row one-shot-flag/save-data: grep save layer có sẵn của project (DataManager/*SaveData*/PlayerPrefs wrapper) trước khi chọn chỗ lưu; nêu rõ tradeoff PlayerPrefs vs save file cho dữ liệu streak. Architecture line theo convention project (CLAUDE.md hoặc detect). Không copy nguyên văn row — áp theo cấu trúc."
+  }
+]

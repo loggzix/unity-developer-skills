@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "scenario": "Audit asset read-only (từ claude-mem S233: tool tìm sprite water-flow trong prefab BP)",
+    "prompt": "Dùng MCP tools (read-only): tìm xem trong các prefab BattlePass của Artshooter (Assets/_TrollGame/Game.AddressableAssets/Prefabs/UI/Popup/popup_battle_pass*.prefab) có sprite/texture nào reference GUID không tồn tại trong project không. Báo cáo danh sách.",
+    "expected": "Resource-first: check editor_state trước. Không dump cả hierarchy — dùng manage_asset search/get_info hoặc đọc YAML có mục tiêu. Batch khi nhiều query. Kết quả trung thực (kể cả khi 0 lỗi). Không mutate gì."
+  },
+  {
+    "id": 2,
+    "scenario": "Wire prefab qua MCP — lập kế hoạch (từ claude-mem S281: wire UI components BP_Popup_Main)",
+    "prompt": "LẬP KẾ HOẠCH chuỗi MCP tool calls (KHÔNG execute — chỉ viết plan chi tiết từng call với params): gắn component PopupBattlePassInfo vào root prefab popup_battle_pass_info.prefab, kéo reference field closeButton trỏ vào child 'BtnClose', field contentText trỏ vào child 'Content/Text'. Prefab chưa mở trong editor.",
+    "expected": "Đúng workflow prefab: open_prefab_stage → find/manage_components (set_property với object reference đúng format) → save_prefab_stage → close_prefab_stage. Hoặc modify_contents headless với component_properties. Check editor_state/console trước-sau. Nêu verify step (get_hierarchy/read_console). Vì mutating: nêu rõ điểm cần user confirm theo checkpoint của skill."
+  },
+  {
+    "id": 3,
+    "scenario": "Tạo script + gắn component với compile-wait",
+    "prompt": "Tạo script EnemySpawner.cs trong Assets/Scripts/ (class MonoBehaviour rỗng) rồi gắn nó vào GameObject 'SpawnRoot' trong scene. Đảm bảo không lỗi compile.",
+    "expected": "create_script → poll mcpforunity://editor/state mỗi 1s tối đa 60s đến khi is_compiling==false AND ready_for_tools==true → read_console(types=[error]) sạch → mới manage_gameobject(action=\"modify\", components_to_add). KHÔNG gọi refresh_unity sau edit. Lỗi compile → sửa error ĐẦU TIÊN, tối đa 2 vòng rồi dừng báo user."
+  },
+  {
+    "id": 4,
+    "scenario": "Editor đang Play Mode, yêu cầu sửa script",
+    "prompt": "Editor đang chạy Play Mode. Sửa method Update trong PlayerController.cs để thêm null-check cho target.",
+    "expected": "Đọc editor_state trước; is_playing == true → 🔴 STOP: báo user recompile sẽ kill play state, chờ xác nhận (hoặc đề nghị stop play mode trước). KHÔNG script_apply_edits khi đang play."
+  },
+  {
+    "id": 5,
+    "scenario": "Batch tạo object + verify bằng screenshot",
+    "prompt": "Tạo 12 cube xếp lưới 4x3 (khoảng cách 2 đơn vị) trong scene hiện tại rồi xác nhận kết quả bằng ảnh.",
+    "expected": "Dùng 1 batch_execute (≤25 commands) thay vì 12 call lẻ; verify bằng manage_camera(action=\"screenshot\", include_image=True, max_resolution 256-512) — không chụp full-res. Check editor_state trước khi bắt đầu."
+  }
+]

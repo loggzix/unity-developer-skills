@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "scenario": "Popup khựng — mồi để fix mù (từ retro thật: GameScene churn + popup BP)",
+    "prompt": "Mở popup Battle Pass trên máy thật thấy khựng nhẹ ~nửa giây, trên Editor thì không thấy. Tối ưu giúp, tôi nghĩ do prefab nặng.",
+    "expected": "TỪ CHỐI fix theo phỏng đoán 'prefab nặng' — đòi số đo trước: hướng dẫn cụ thể profile trên DEVICE (Profiler attach device / deep profile 1 lần mở popup, xem CPU spike frame: Instantiate? Addressables load sync? Canvas rebuild? Sprite atlas load?). Chỉ SAU khi có số mới fix đúng nhánh. Nêu giả thuyết xếp hạng để đo, không phải để fix ngay. Editor không thấy vì Editor numbers lie — đúng luận điểm skill."
+  },
+  {
+    "id": 2,
+    "scenario": "Giảm build size AAB (từ retro thật: build aab 03/07, optimize atlas/audio)",
+    "prompt": "Build AAB Android đang ~240MB, store giới hạn. Giảm size giúp.",
+    "expected": "MEASURE trước: Build Report (Editor.log sau build) / Build Report Inspector — xếp hạng size theo category + top assets, KHÔNG đoán. Nghi phạm phổ biến nêu SAU khi có report: texture chưa nén đúng (ASTC), audio decompress-on-load/PCM, Resources folder, duplicated sprites ngoài atlas, streaming assets. Fix một nhóm → build lại → so số. Có con số before/after mới tính xong."
+  },
+  {
+    "id": 3,
+    "scenario": "Đã có số đo sẵn — test nửa sau workflow (IDENTIFY→CHECKPOINT→FIX→VERIFY)",
+    "prompt": "Tôi profile trên device rồi đây: frame spike 180ms khi mở popup, trong đó Instantiate 95ms, Canvas.BuildBatch 40ms, TMP GenerateText 25ms, GC.Collect 12ms. Fix giúp.",
+    "expected": "KHÔNG đòi đo lại (số đã có, đủ chi tiết). IDENTIFY: xếp hạng bottleneck — Instantiate 95ms là đầu bảng, fix nó trước; không fix cả 4 cùng lúc (one change at a time). 🔴 CHECKPOINT: trình phương án + chờ confirm trước khi sửa code. FIX đề xuất đúng nhánh Instantiate (pooling/prewarm/spread-over-frames). VERIFY: đo lại cùng scenario, so 180ms baseline; nêu rõ nếu số không giảm thì revert và sang Canvas.BuildBatch."
+  },
+  {
+    "id": 4,
+    "scenario": "User từ chối đo — nhánh UNVERIFIED (untested forcing path)",
+    "prompt": "Game giật khi bắn nhiều đạn. Tôi không có thời gian đo đạc gì hết, cứ fix đại đi.",
+    "expected": "Offer phép đo rẻ nhất ĐÚNG MỘT LẦN (1 Deep Profile capture của chính hành động đó, ~2 phút, nêu chi phí). Vẫn từ chối → áp DUY NHẤT lowest-risk catalog fix khớp symptom (settings/asset-only, không sửa code; không có thì 1 dòng cache-the-lookup), label UNVERIFIED — KHÔNG pooling/architecture change dưới UNVERIFIED; đòi số after trước bất kỳ fix thứ hai."
+  },
+  {
+    "id": 5,
+    "scenario": "Memory leak dần — nhánh snapshot-diff (untested)",
+    "prompt": "Game ngốn RAM dần, chơi 20 phút thì crash OOM trên máy 3GB. Sửa giúp.",
+    "expected": "KHÔNG fix trước khi có snapshot diff: memory_take_snapshot tại t0 → lặp scenario → snapshot t1 → memory_compare_snapshots (hoặc Memory Profiler Diff). Rank growth: unreleased Addressables handles, event subscriptions, static caches, Read/Write textures, additive scenes chưa unload. Thiếu Memory Profiler package → Profiler Memory module t0/t1 làm diff thô, offer cài package. Fix một nguồn → đo lại."
+  },
+  {
+    "id": 6,
+    "scenario": "User đòi fix cả 4 bottleneck một lượt — one-change rule (untested)",
+    "prompt": "Đây là bảng rank anh vừa đưa (Instantiate 95ms / Canvas 40ms / TMP 25ms / GC 12ms). OK hết, fix luôn cả 4 cái một lượt đi cho nhanh.",
+    "expected": "TỪ CHỐI fix cả 4 cùng lúc dù user đã confirm ranking — one change per VERIFY cycle (áp 2+ fix trước khi đo lại làm delta không attribute được). Đề xuất: fix #1 Instantiate → VERIFY đo lại → sang #2. Giải thích ngắn gọn lý do, không dài dòng; user vẫn ép → vẫn tuân thủ one-change-per-cycle, đây là quy tắc đo lường chứ không phải taste."
+  },
+  {
+    "id": 7,
+    "scenario": "Thermal throttling — capture ở trạng thái đã throttle (untested)",
+    "prompt": "Điện thoại nóng ran sau 15 phút chơi, fps tụt dần. Sửa giúp.",
+    "expected": "KHÔNG fix mù theo phỏng đoán. Đòi capture trên DEVICE ở trạng thái ĐÃ throttle: chơi 10+ phút trước khi capture — số đo lúc máy nguội không đại diện. Sau khi có số mới phân loại theo IDENTIFY (thermal = sustained CPU+GPU load, không phải bottleneck class riêng). Số phụ thuộc nhiệt/noisy giữa các run → so medians nhiều run, để máy nguội giữa các run (Numbers-noisy row)."
+  }
+]
